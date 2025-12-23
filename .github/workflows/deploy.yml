@@ -1,0 +1,58 @@
+# Workflow de despliegue genérico (SSH + rsync)
+# Requisitos (ver DEPLOYMENT.md): SSH_PRIVATE_KEY, SSH_HOST, SSH_USER, TARGET_DIR
+name: Deploy to remote server
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build (optional)
+        run: |
+          set -e
+          if [ -f package.json ]; then
+            echo "Detected Node project: installing and building"
+            curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+            npm ci
+            npm run build || true
+          elif [ -f requirements.txt ] || [ -f pyproject.toml ]; then
+            echo "Detected Python project: installing requirements"
+            python3 -m venv .venv
+            source .venv/bin/activate
+            pip install --upgrade pip
+            if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
+          else
+            echo "No build step detected; continuing"
+          fi
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Ensure rsync is available
+        run: sudo apt-get update && sudo apt-get install -y rsync
+
+      - name: Deploy files to remote server via rsync
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          TARGET_DIR: ${{ secrets.TARGET_DIR }}
+        run: |
+          set -e
+          echo "Deploying to ${SSH_USER}@${SSH_HOST}:${TARGET_DIR}"
+          rsync -avz --delete --exclude '.git' ./ "${SSH_USER}@${SSH_HOST}:${TARGET_DIR}"
+
+      - name: Deployment finished
+        run: echo "Deployment completed successfully"
