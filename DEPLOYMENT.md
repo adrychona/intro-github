@@ -17,4 +17,16 @@ Notas de uso:
 - Asegúrate de que el servidor remoto tenga permisos y suficiente espacio para recibir los archivos.
 - Puedes adaptar el workflow a Docker Hub, GitHub Pages, AWS, etc., cambiando la sección de deploy.
 
-¿Quieres que configure una variante para Docker Hub, GitHub Pages o un proveedor en concreto?
+Integración con Jira/Atlassian
+
+Este workflow ahora crea un `GitHub Deployment` y marca su estado como `success`. Si instalas la integración oficial
+de Atlassian ↔️ GitHub (por ejemplo, la app "Atlassian for GitHub"), Jira Cloud puede detectar estos despliegues y
+mostrarlos en la pestaña "Deployments" cuando haya asociaciones con commits o issues.
+
+Pasos recomendados:
+
+- Instala la integración Atlassian ↔ GitHub desde el marketplace o desde la configuración de tu proyecto/organización.
+- Asegúrate de que tus commits incluyan claves de Jira (p. ej. `PROJ-123`) o que tus cambios estén vinculados mediante la app.
+- Opcional: en lugar de la integración, puedes usar la API de Deployments de Jira para reportar despliegues directamente (ver notas anteriores).
+
+¿Quieres que añada la configuración para desplegar y publicar una imagen Docker en Docker Hub, o un paso para reportar también a la API de Jira?

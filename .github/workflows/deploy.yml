@@ -54,5 +54,34 @@ jobs:
           echo "Deploying to ${SSH_USER}@${SSH_HOST}:${TARGET_DIR}"
           rsync -avz --delete --exclude '.git' ./ "${SSH_USER}@${SSH_HOST}:${TARGET_DIR}"
 
+      - name: Create GitHub Deployment (so integrations can detect it)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          set -e
+          sudo apt-get update && sudo apt-get install -y jq
+          echo "Creating GitHub deployment for ref $GITHUB_SHA"
+          payload=$(jq -n --arg ref "$GITHUB_SHA" --arg env "production" '{ref:$ref, required_contexts:[], environment:$env, production_environment:true}')
+          resp=$(curl -s -X POST -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/deployments" -d "$payload")
+          deployment_id=$(echo "$resp" | jq -r .id)
+          if [ -z "$deployment_id" ] || [ "$deployment_id" = "null" ]; then echo "Failed to create deployment: $resp"; exit 1; fi
+          echo "Created deployment id: $deployment_id"
+          echo "DEPLOYMENT_ID=$deployment_id" >> $GITHUB_ENV
+
+      - name: Mark GitHub Deployment as successful
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DEPLOYMENT_ID: ${{ env.DEPLOYMENT_ID }}
+        run: |
+          set -e
+          sudo apt-get update && sudo apt-get install -y jq
+          echo "Marking deployment ${DEPLOYMENT_ID} as successful"
+          status_payload=$(jq -n --arg state "success" --arg env "production" --arg url "ssh://${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}${{ secrets.TARGET_DIR }}" '{state:$state, environment:$env, environment_url:$url}')
+          curl -s -X POST -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/deployments/${DEPLOYMENT_ID}/statuses" -d "$status_payload"
+
       - name: Deployment finished
         run: echo "Deployment completed successfully"
