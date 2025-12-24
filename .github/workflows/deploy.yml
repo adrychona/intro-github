@@ -1,4 +1,4 @@
-name: Deploy to remote server
+name: Deploy to remote server 2
 
 on:
   push:

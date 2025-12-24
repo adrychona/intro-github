@@ -1,6 +1,6 @@
 # Guía de despliegue
 
-Este repositorio incluye un workflow de ejemplo para desplegar a un servidor remoto usando SSH y `rsync`:
+Este repositorioo incluye un workflow de ejemplo para desplegar a un servidor remoto usando SSH y `rsync`:
 
 - Archivo del workflow: .github/workflows/deploy.yml
 
